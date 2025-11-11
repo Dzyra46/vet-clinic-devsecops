@@ -19,7 +19,6 @@ A modern veterinary clinic management system built with Next.js (App Router), Re
 - Framework: Next.js 14 (App Router)
 - UI: React 18 + Tailwind CSS
 - Language: TypeScript
-- Database: BELUM diaktifkan (mock in-memory). Rencana penggunaan ORM (misal Prisma) diserahkan ke tim backend.
 - Linting: ESLint (Next.js config)
 
 ## Getting Started (Teammate Quick Start)
