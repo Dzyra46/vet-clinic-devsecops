@@ -1,0 +1,28 @@
+{
+  // Nonaktifkan CSS validator bawaan VSCode (karena pakai Tailwind)
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  
+  // Ignore unknown at-rules untuk CSS
+  "css.lint.unknownAtRules": "ignore",
+  
+  // Aktifkan Stylelint untuk linting
+  "stylelint.enable": true,
+  
+  // Auto-fix Stylelint saat save
+  "editor.codeActionsOnSave": {
+    "source.fixAll.stylelint": "explicit"
+  },
+  
+  // Tailwind CSS IntelliSense settings (opsional tapi bagus)
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ],
+  
+  // Recommendations
+  "files.associations": {
+    "*.css": "tailwindcss"
+  }
+}
