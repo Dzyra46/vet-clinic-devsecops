@@ -5,6 +5,11 @@ import { Button } from '@/components/ui/Button';
 import QrScanner from '@/components/landing/QrScanner';
 import { Heart, Shield, Clock, Award, LogIn, QrCode } from 'lucide-react';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
+import diagnosticImg from '@/assets/Diagnostics.jpg';
+import surgeryImg from '@/assets/Surgery_Recovery.jpg';
+import wellnessImg from '@/assets/Wellness_Exams.jpg';
+import dogImg from '@/assets/Dog.jpg';
+import Link from 'next/link';
 
 export default function PublicLandingPage() {
   const router = useRouter();
@@ -21,9 +26,14 @@ export default function PublicLandingPage() {
               </div>
               <span className="text-xl font-semibold">PetCare Clinic</span>
             </div>
-            <Button onClick={() => router.push('/login')}>
-              Staff Login
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button onClick={() => router.push('/login')}>
+                Staff Login
+              </Button>
+              <Button variant="secondary" onClick={() => router.push('/register-pet')}>
+                Register Your Pet
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -33,15 +43,15 @@ export default function PublicLandingPage() {
         {/* Left: Marketing / Intro */}
         <div className="flex-1 space-y-6">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-            Manage & Access <span className="text-blue-600">Pet Medical Records</span> Seamlessly
+            Manage & Access <br /><span className="text-blue-600">Pet Medical Records</span> Seamlessly
           </h1>
           <p className="text-lg text-gray-600 max-w-prose">
-            A unified platform for veterinarians, administrators, and pet owners. Secure, auditable, and fast.
+            A unified platform for veterinarians, administrators, and pet owners.<br /> Secure, auditable, and fast.
           </p>
           <div className="rounded-2xl overflow-hidden shadow-lg border">
-            <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
+            <div className="relative w-full h-64 sm:h-96 lg:h-[475px]">
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1552053831-71594a27632d?w=1200&q=80"
+                src={dogImg.src}
                 alt="Veterinarian examining a pet"
                 className="absolute inset-0 w-full h-full object-cover"
               />
@@ -105,19 +115,19 @@ export default function PublicLandingPage() {
             {[{
               title: 'Wellness Exams',
               desc: 'Preventive care & health optimization',
-              img: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=600&q=80'
+              img: wellnessImg
             },{
               title: 'Diagnostics',
               desc: 'Fast, accurate lab & imaging',
-              img: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80'
+              img: diagnosticImg
             },{
               title: 'Surgery & Recovery',
               desc: 'Modern sterile surgical suites',
-              img: 'https://images.unsplash.com/photo-1628407187695-51e3f4446b42?w=600&q=80'
+              img: surgeryImg
             }].map(s => (
               <div key={s.title} className="bg-white rounded-xl border shadow-sm hover:shadow-md transition overflow-hidden">
-                <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
-                  <ImageWithFallback src={s.img} alt={s.title} className="absolute inset-0 w-full h-full object-cover" />
+                <div className="relative w-full aspect-video">
+                  <ImageWithFallback src={s.img.src} alt={s.title} className="absolute inset-0 w-full h-full object-cover" />
                 </div>
                 <div className="p-5 space-y-2">
                   <p className="font-semibold">{s.title}</p>
@@ -133,7 +143,7 @@ export default function PublicLandingPage() {
       <footer className="bg-gray-50 py-8">
         <div className="container mx-auto px-4 text-center text-gray-600">
           <p>© 2025 PetCare Veterinary Clinic. All rights reserved.</p>
-          <p className="mt-2">📞 (555) 123-4567 | 📧 info@petcare.com</p>
+          <p className="mt-2">📞 (021) 123-4567 | 📧 info@vetclinic.com</p>
         </div>
       </footer>
     </div>

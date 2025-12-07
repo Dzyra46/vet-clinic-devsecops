@@ -6,10 +6,10 @@ export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Get the token from the cookies
-  const isAuthenticated = request.cookies.has('user');
+  const isAuthenticated = request.cookies.has('session_token');
 
   // Define public paths that don't require authentication
-  const publicPaths = ['/login', '/', '/pet']; 
+  const publicPaths = ['/login', '/', '/pet', '/register-pet']; 
 
   // Check if the path is public or starts with /pet/
   const isPublicPath = publicPaths.includes(path) || path.startsWith('/pet/');

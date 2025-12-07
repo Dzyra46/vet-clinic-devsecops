@@ -12,8 +12,9 @@ interface PatientFormData {
   petName: string;
   species: string;
   breed: string;
-  age: string; // disimpan sebagai string lalu dikonversi saat submit
-  weight: string; // sama seperti age
+  age: string;
+  weight: string;
+  birthDate: string;
   color: string;
   ownerName: string;
   ownerEmail: string;
@@ -28,6 +29,7 @@ export function AddPatient() {
     breed: '',
     age: '',
     weight: '',
+    birthDate: '',
     color: '',
     ownerName: '',
     ownerEmail: '',
@@ -79,29 +81,35 @@ export function AddPatient() {
         breed: formData.breed,
         age: formData.age ? Number(formData.age) : 0,
         weight: formData.weight ? Number(formData.weight) : 0,
+        birthDate: formData.birthDate || null,
         owner: formData.ownerName,
+        ownerEmail: formData.ownerEmail, // Add this field
         contact: formData.ownerPhone,
-        lastVisit: new Date().toISOString().slice(0,10),
+        address: formData.ownerAddress,
         status: 'healthy',
-        medicalCondition: ''
+        notes: ''
       };
-
+``
       const res = await fetch('/api/patients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        credentials: 'include'
       });
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Gagal menambah patient');
+        const errData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errData.error || `Error: ${res.status}`);
       }
 
   toast.success('Patient berhasil ditambahkan');
       setFormData({
-        petName: '', species: '', breed: '', age: '', weight: '', color: '', ownerName: '', ownerEmail: '', ownerPhone: '', ownerAddress: ''
+        petName: '', species: '', breed: '', age: '', weight: '', birthDate: '', color: '', ownerName: '', ownerEmail: '', ownerPhone: '', ownerAddress: ''
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      const errorMessage = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      setError(errorMessage);
+      toast.error(`❌ ${errorMessage}`);
+      console.error('Submit error:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -111,8 +119,8 @@ export function AddPatient() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center">
-            <UserPlus className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-lg bg-blue-600 text-white flex items-center justify-center">
+            <UserPlus className="w-7 h-7" />
           </div>
           <div>
             <h1 className="text-2xl font-bold leading-tight">Add New Patient</h1>
@@ -129,23 +137,25 @@ export function AddPatient() {
         )}
         <div className="grid md:grid-cols-2 gap-6">
           {/* Pet Information */}
-          <Card title="Pet Information" className="md:col-span-2">
+          <Card className="md:col-span-2 p-6">
             <div className="flex items-center gap-2 mb-4 text-blue-600">
-              <PawPrint className="w-5 h-5" />
-              <h3 className="font-semibold">Pet Details</h3>
+              <PawPrint className="w-6 h-6" />
+              <h3 className="text-xl font-semibold">Pet Details</h3>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <FormInput
-                label="Pet Name"
-                name="petName"
-                value={formData.petName}
-                onChange={handleChange}
-                placeholder="e.g., Max, Luna"
-                required
-              />
-
-              <div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <FormInput
+                  label="Pet Name"
+                  name="petName"
+                  value={formData.petName}
+                  onChange={handleChange}
+                  placeholder="e.g., Max, Luna"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Species <span className="text-red-500">*</span>
                 </label>
@@ -154,101 +164,128 @@ export function AddPatient() {
                   value={formData.species}
                   onChange={handleChange}
                   required
+                  aria-label="Species"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select species</option>
                   <option value="dog">Dog</option>
                   <option value="cat">Cat</option>
-                  <option value="bird">Bird</option>
-                  <option value="rabbit">Rabbit</option>
-                  <option value="hamster">Hamster</option>
                   <option value="other">Other</option>
                 </select>
               </div>
 
-              <FormInput
-                label="Breed"
-                name="breed"
-                value={formData.breed}
-                onChange={handleChange}
-                placeholder="e.g., Golden Retriever, Persian"
-              />
+              <div className="space-y-1">
+                <FormInput
+                  label="Breed"
+                  name="breed"
+                  value={formData.breed}
+                  onChange={handleChange}
+                  placeholder="e.g., Golden Retriever, Persian"
+                  required
+                />
+              </div>
 
-              <FormInput
-                label="Age"
-                name="age"
-                type="number"
-                value={formData.age}
-                onChange={handleChange}
-                placeholder="Age in years"
-                min="0"
-              />
+              <div className="space-y-1">
+                <FormInput
+                  label="Age"
+                  name="age"
+                  type="number"
+                  value={formData.age}
+                  onChange={handleChange}
+                  placeholder="Age in years"
+                  min="0"
+                  required
+                />
+              </div>
 
-              <FormInput
-                label="Weight (kg)"
-                name="weight"
-                type="number"
-                step="0.1"
-                value={formData.weight}
-                onChange={handleChange}
-                placeholder="e.g., 15.5"
-                min="0"
-              />
+              <div className="space-y-1">
+                <FormInput
+                  label="Weight (kg)"
+                  name="weight"
+                  type="number"
+                  step="0.1"
+                  value={formData.weight}
+                  onChange={handleChange}
+                  placeholder="e.g., 15.5"
+                  min="0"
+                  required
+                />
+              </div>
 
-              <FormInput
-                label="Color/Markings"
-                name="color"
-                value={formData.color}
-                onChange={handleChange}
-                placeholder="e.g., Brown, White with black spots"
-              />
+              <div className="space-y-1">
+                <FormInput
+                  label="Birth Date"
+                  name="birthDate"
+                  type="date"
+                  value={formData.birthDate}
+                  onChange={handleChange}
+                  placeholder="e.g., 2020-01-01"
+                  required
+                  max={new Date().toISOString().split("T")[0]}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <FormInput
+                  label="Color/Markings"
+                  name="color"
+                  value={formData.color}
+                  onChange={handleChange}
+                  placeholder="e.g., Brown, White with black spots"
+                />
+              </div>
             </div>
-            <div className="mt-4 border-t pt-4 grid md:grid-cols-3 gap-4 text-xs text-gray-500">
+            <div className="mt-4 border-t pt-4 grid md:grid-cols-2 gap-4 text-xs text-gray-500">
               <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-400" /> Required fields marked *</div>
-              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-400" /> Use metric units (kg)</div>
               <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-purple-400" /> Keep details accurate</div>
             </div>
           </Card>
 
           {/* Owner Information */}
-          <Card title="Owner Information" className="md:col-span-2">
+          <Card className="md:col-span-2 p-6">
             <div className="flex items-center gap-2 mb-4 text-green-600">
-              <User className="w-5 h-5" />
-              <h3 className="font-semibold">Owner Details</h3>
+              <User className="w-6 h-6" />
+              <h3 className="text-xl font-semibold">Owner Details</h3>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <FormInput
-                label="Owner Name"
-                name="ownerName"
-                value={formData.ownerName}
-                onChange={handleChange}
-                placeholder="e.g., John Smith"
-                required
-              />
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <FormInput
+                  label="Owner Name"
+                  name="ownerName"
+                  value={formData.ownerName}
+                  onChange={handleChange}
+                  placeholder="e.g., John Smith"
+                  required
+                />
+              </div>
 
-              <FormInput
-                label="Email"
-                name="ownerEmail"
-                type="email"
-                value={formData.ownerEmail}
-                onChange={handleChange}
-                placeholder="e.g., john@example.com"
-                required
-              />
+              <div className="space-y-1">
+                <FormInput
+                  label="Email"
+                  name="ownerEmail"
+                  type="email"
+                  value={formData.ownerEmail}
+                  onChange={handleChange}
+                  placeholder="e.g., john@example.com"
+                  required
+                />
+              </div>
 
-              <FormInput
-                label="Phone Number"
-                name="ownerPhone"
-                type="tel"
-                value={formData.ownerPhone}
-                onChange={handleChange}
-                placeholder="e.g., +62 812 3456 7890"
-                required
-              />
+              <div className="space-y-1">
+                <FormInput
+                  label="Phone Number"
+                  name="ownerPhone"
+                  type="tel"
+                  value={formData.ownerPhone}
+                  onChange={handleChange}
+                  placeholder="e.g., +62 812 3456 7890"
+                  required
+                />
+              </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="md:col-span-2 space-y-1">
+                <label className="block text-base font-sm text-gray-700 mb-1">
                   Address <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -263,9 +300,10 @@ export function AddPatient() {
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-3 text-xs text-gray-500">
-              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-400" /> Pastikan nomor telepon aktif</div>
-              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-400" /> Email digunakan untuk notifikasi</div>
+            <div className="mt-4 border-t pt-4 grid md:grid-cols-3 gap-2 text-xs text-gray-500">
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-400" /> Required fields marked *</div>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-400" /> Number must be active </div>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-400" /> Email will be used for notifications</div>
             </div>
           </Card>
         </div>
@@ -276,13 +314,14 @@ export function AddPatient() {
             type="submit"
             variant="primary"
             disabled={isSubmitting}
-            className="min-w-[150px]"
+            className="min-w-[120px]"
           >
             {isSubmitting ? 'Saving...' : 'Add Patient'}
           </Button>
           <Button
             type="button"
             variant="secondary"
+            className="min-w-[120px]"
             onClick={() => {
               if (confirm('Are you sure you want to reset the form?')) {
                 setFormData({
@@ -291,6 +330,7 @@ export function AddPatient() {
                   breed: '',
                   age: '',
                   weight: '',
+                  birthDate: '',
                   color: '',
                   ownerName: '',
                   ownerEmail: '',

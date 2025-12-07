@@ -4,10 +4,13 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface User {
-  id: number;
+  id: string;
+  user_id?: string; // For doctors, this is their doctor_id
   name: string;
   email: string;
   role: 'admin' | 'doctor' | 'pet-owner';
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface AuthContextType {

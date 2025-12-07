@@ -38,8 +38,7 @@ export function Sidebar() {
       { id: 'corrections', label: 'Corrections', href: '/admin/corrections', icon: Edit3 },
       { id: 'add-patient', label: 'Add Patient', href: '/admin/add-patient', icon: UserPlus },
       { id: 'generate-qr', label: 'Generate QR', href: '/admin/generate-qr', icon: QrCode },
-        { id: 'logs', label: 'System Logs', href: '/admin/logs', icon: Activity },
-      { id: 'settings', label: 'Settings', href: '/admin/settings', icon: Settings }
+        { id: 'logs', label: 'System Logs', href: '/admin/logs', icon: Activity }
     ],
     doctor: [
       { id: 'dashboard', label: 'Dashboard', href: '/doctor/dashboard', icon: BarChart3 },
@@ -69,8 +68,6 @@ export function Sidebar() {
         return { name: 'Administrator', icon: '⚙️', color: 'bg-purple-100 text-purple-700' };
       case 'doctor':
         return { name: 'Veterinarian', icon: '🩺', color: 'bg-green-100 text-green-700' };
-      case 'pet-owner':
-        return { name: 'Pet Owner', icon: '👤', color: 'bg-blue-100 text-blue-700' };
       default:
         return { name: 'User', icon: '👤', color: 'bg-gray-100 text-gray-700' };
     }

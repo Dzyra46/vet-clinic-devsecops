@@ -1,135 +1,109 @@
-import { useState } from 'react';
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/Select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/Tabs';
 import { Badge } from './ui/Badge';
 import { Calendar, Syringe, Pill, FileText } from 'lucide-react';
+import { toast } from 'sonner';
 
-interface HistoryEntry {
+interface Patient {
   id: string;
-  date: string;
-  type: 'visit' | 'vaccination' | 'prescription' | 'surgery';
-  title: string;
-  description: string;
-  veterinarian: string;
-  details?: string;
-  notes?: string;
+  name: string;
+  species: string;
+  breed: string;
 }
 
-const mockHistory: Record<string, HistoryEntry[]> = {
-  '1': [
-    {
-      id: 'h1',
-      date: '2025-10-10',
-      type: 'visit',
-      title: 'Ear Infection Treatment',
-      description: 'Diagnosed with bacterial ear infection. Prescribed antibiotic drops.',
-      veterinarian: 'Dr. Emily Watson'
-    },
-    {
-      id: 'h2',
-      date: '2025-08-15',
-      type: 'vaccination',
-      title: 'Annual Vaccinations',
-      description: 'Rabies and DHPP vaccines administered.',
-      veterinarian: 'Dr. Michael Chen'
-    },
-    {
-      id: 'h3',
-      date: '2025-05-20',
-      type: 'visit',
-      title: 'Wellness Checkup',
-      description: 'Routine examination, all parameters normal.',
-      veterinarian: 'Dr. Emily Watson'
-    }
-  ],
-  '2': [
-    {
-      id: 'h4',
-      date: '2025-10-12',
-      type: 'visit',
-      title: 'Annual Checkup',
-      description: 'Complete physical examination, vaccinations updated.',
-      veterinarian: 'Dr. Michael Chen'
-    }
-  ],
-  '3': [
-    {
-      id: 'h5',
-      date: '2025-10-14',
-      type: 'surgery',
-      title: 'Dental Surgery',
-      description: 'Professional cleaning and tooth extraction performed.',
-      veterinarian: 'Dr. Sarah Martinez'
-    }
-  ],
-  '5': [
-    {
-      id: 'h6',
-      date: '2025-10-15',
-      type: 'surgery',
-      title: 'ACL Reconstruction Surgery',
-      description: 'Complete ACL (Anterior Cruciate Ligament) tear in left hind leg. Surgical reconstruction performed using tibial plateau leveling osteotomy (TPLO) technique.',
-      veterinarian: 'Dr. Sarah Martinez',
-      details: 'Pre-surgery: Patient presented with severe lameness and pain in left hind limb. X-rays confirmed complete ACL rupture with mild joint effusion. Blood work normal. Anesthesia protocol: Propofol induction, maintained with isoflurane. Surgery duration: 2 hours 15 minutes. Post-surgery: Patient recovered well from anesthesia. Pain management with carprofen and tramadol. Strict cage rest prescribed for 8 weeks.',
-  notes: 'Follow-up evaluations planned at 1, 2, 4, and 8 weeks post-op. Physical therapy to begin at week 4. Expected full recovery in 12-16 weeks.'
-    },
-    {
-      id: 'h7',
-      date: '2025-09-10',
-      type: 'visit',
-      title: 'Pre-Surgery Consultation',
-      description: 'Initial examination for ACL injury. Lameness observed, drawer test positive. Recommended surgical intervention.',
-      veterinarian: 'Dr. Sarah Martinez',
-      details: 'Patient showing signs of acute lameness. Physical exam revealed positive cranial drawer sign and tibial thrust test. Recommended ACL surgery after pre-operative blood work and x-rays.'
-    },
-    {
-      id: 'h8',
-      date: '2025-07-22',
-      type: 'vaccination',
-      title: 'Annual Vaccinations',
-      description: 'Rabies, DHPP, and Bordetella vaccines administered. Health certificate issued.',
-      veterinarian: 'Dr. Emily Watson'
-    },
-    {
-      id: 'h9',
-      date: '2025-05-15',
-      type: 'visit',
-      title: 'Wellness Examination',
-      description: 'Annual wellness exam. All vital signs normal. Weight: 32kg. Dental cleaning recommended.',
-      veterinarian: 'Dr. Michael Chen'
-    },
-    {
-      id: 'h10',
-      date: '2025-03-08',
-      type: 'prescription',
-      title: 'Heartworm Prevention',
-      description: 'Prescribed 6-month supply of heartworm prevention medication (Heartgard Plus).',
-      veterinarian: 'Dr. Emily Watson'
-    },
-    {
-      id: 'h11',
-      date: '2024-12-20',
-      type: 'visit',
-      title: 'Skin Allergy Treatment',
-      description: 'Diagnosed with environmental allergies. Prescribed antihistamines and medicated shampoo.',
-      veterinarian: 'Dr. Michael Chen',
-      details: 'Patient presented with itching and red skin patches. Allergy testing recommended if symptoms persist.'
-    }
-  ]
-};
-
-const mockPatients = [
-  { id: '1', name: 'Max - Golden Retriever' },
-  { id: '2', name: 'Luna - Persian Cat' },
-  { id: '3', name: 'Charlie - Labrador' },
-  { id: '5', name: 'Rocky - German Shepherd' }
-];
+interface MedicalRecord {
+  id: string;
+  visit_date: string;
+  diagnosis: string;
+  treatment: string;
+  medication: string;
+  doctor_name: string;
+  patient_name: string;
+  notes?: string;
+  next_visit?: string;
+  created_at: string;
+}
 
 export function PatientHistory() {
-  const [selectedPatient, setSelectedPatient] = useState('1');
-  
-  const history = mockHistory[selectedPatient] || [];
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState('');
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
+  useEffect(() => {
+    if (selectedPatient) {
+      fetchMedicalRecords(selectedPatient);
+    }
+  }, [selectedPatient]);
+
+  const fetchPatients = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/patients');
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPatients(data.patients || []);
+        
+        // Auto-select first patient
+        if (data.patients && data.patients.length > 0) {
+          setSelectedPatient(data.patients[0].id);
+        }
+      } else {
+        toast.error('Failed to load patients');
+      }
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+      toast.error('Error loading patients');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMedicalRecords = async (patientId: string) => {
+    try {
+      setLoadingRecords(true);
+      const response = await fetch(`/api/medical-records?patient_id=${patientId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setMedicalRecords(data.records || []);
+      } else {
+        toast.error('Failed to load medical records');
+      }
+    } catch (error) {
+      console.error('Error fetching medical records:', error);
+      toast.error('Error loading medical records');
+    } finally {
+      setLoadingRecords(false);
+    }
+  };
+
+  const getRecordType = (record: MedicalRecord): 'visit' | 'vaccination' | 'prescription' | 'surgery' => {
+    const diagnosisLower = record.diagnosis?.toLowerCase() || '';
+    const treatmentLower = record.treatment?.toLowerCase() || '';
+    const medicationLower = record.medication?.toLowerCase() || '';  // Added this
+    
+    if (diagnosisLower.includes('vaccin') || treatmentLower.includes('vaccin')) {
+      return 'vaccination';
+    }
+    if (diagnosisLower.includes('surgery') || treatmentLower.includes('surgery') || diagnosisLower.includes('operation')) {
+      return 'surgery';
+    }
+    if (medicationLower.includes('prescription') || medicationLower.includes('medication')) {  // Changed condition
+      return 'prescription';
+    }
+    return 'visit';
+  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -137,7 +111,7 @@ export function PatientHistory() {
         return <Calendar className="w-4 h-4" />;
       case 'vaccination':
         return <Syringe className="w-4 h-4" />;
-      case 'prescription':
+      case 'medication':
         return <Pill className="w-4 h-4" />;
       case 'surgery':
         return <FileText className="w-4 h-4" />;
@@ -152,13 +126,69 @@ export function PatientHistory() {
         return 'bg-blue-100 text-blue-800';
       case 'vaccination':
         return 'bg-green-100 text-green-800';
-      case 'prescription':
+      case 'medication':
         return 'bg-purple-100 text-purple-800';
       case 'surgery':
         return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const filterRecordsByType = (type: string) => {
+    if (type === 'all') return medicalRecords;
+    return medicalRecords.filter(record => getRecordType(record) === type);
+  };
+
+  const renderRecordCard = (record: MedicalRecord) => {
+    const type = getRecordType(record);
+    
+    return (
+      <Card key={record.id}>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                {getTypeIcon(type)}
+                {record.diagnosis}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {new Date(record.visit_date).toLocaleDateString()} • {record.doctor_name}
+              </p>
+            </div>
+            <Badge className={getTypeColor(type)}>
+              {type}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Treatment:</p>
+              <p>{record.treatment}</p>
+            </div>
+            {record.medication && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">medication:</p>
+                <p className="text-sm">{record.medication}</p>
+              </div>
+            )}
+            {record.notes && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Notes:</p>
+                <p className="text-sm">{record.notes}</p>
+              </div>
+            )}
+            {record.next_visit && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Next Visit:</p>
+                <p className="text-sm">{new Date(record.next_visit).toLocaleDateString()}</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -170,192 +200,65 @@ export function PatientHistory() {
 
       <div className="mb-6">
         <label className="text-sm mb-2 block">Select Patient</label>
-        <Select value={selectedPatient} onValueChange={setSelectedPatient}>
-          <SelectTrigger className="w-full md:w-96">
-            <SelectValue placeholder="Select a patient" />
-          </SelectTrigger>
-          <SelectContent>
-            {mockPatients.map((patient) => (
-              <SelectItem key={patient.id} value={patient.id}>
-                {patient.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {loading ? (
+          <div className="text-sm text-gray-500">Loading patients...</div>
+        ) : (
+          <Select value={selectedPatient} onValueChange={setSelectedPatient}>
+            <SelectTrigger className="w-full md:w-96">
+              <SelectValue placeholder="Select a patient" />
+            </SelectTrigger>
+            <SelectContent>
+              {patients.map((patient) => (
+                <SelectItem key={`${patient.name} - ${patient.species} (${patient.breed})`} value={`${patient.name} - ${patient.species} (${patient.breed})`}>
+                  {patient.name} - {patient.species} ({patient.breed})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList>
-          <TabsTrigger value="all">All Records</TabsTrigger>
-          <TabsTrigger value="visits">Visits</TabsTrigger>
-          <TabsTrigger value="vaccinations">Vaccinations</TabsTrigger>
-          <TabsTrigger value="surgeries">Surgeries</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="all" className="mt-6">
-          <div className="space-y-4">
-            {history.map((entry) => (
-              <Card key={entry.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="flex items-center gap-2">
-                        {getTypeIcon(entry.type)}
-                        {entry.title}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(entry.date).toLocaleDateString()} • {entry.veterinarian}
-                      </p>
-                    </div>
-                    <Badge className={getTypeColor(entry.type)}>
-                      {entry.type}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Description:</p>
-                      <p>{entry.description}</p>
-                    </div>
-                    {entry.details && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Details:</p>
-                        <p className="text-sm">{entry.details}</p>
-                      </div>
-                    )}
-                    {entry.notes && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Notes:</p>
-                        <p className="text-sm">{entry.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+      {loadingRecords ? (
+        <div className="text-center py-12 text-gray-500">Loading medical records...</div>
+      ) : (
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList>
+            <TabsTrigger value="all">All Records ({medicalRecords.length})</TabsTrigger>
+            <TabsTrigger value="visits">Visits ({filterRecordsByType('visits').length})</TabsTrigger>
+            <TabsTrigger value="vaccinations">Vaccinations ({filterRecordsByType('vaccinations').length})</TabsTrigger>
+            <TabsTrigger value="surgeries">Surgeries ({filterRecordsByType('surgeries').length})</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="all" className="mt-6">
+            <div className="space-y-4">
+              {filterRecordsByType('all').map(renderRecordCard)}
+            </div>
+          </TabsContent>
 
-        <TabsContent value="visits" className="mt-6">
-          <div className="space-y-4">
-            {history.filter(e => e.type === 'visit').map((entry) => (
-              <Card key={entry.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {getTypeIcon(entry.type)}
-                    {entry.title}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(entry.date).toLocaleDateString()} • {entry.veterinarian}
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Description:</p>
-                      <p>{entry.description}</p>
-                    </div>
-                    {entry.details && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Details:</p>
-                        <p className="text-sm">{entry.details}</p>
-                      </div>
-                    )}
-                    {entry.notes && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Notes:</p>
-                        <p className="text-sm">{entry.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+          <TabsContent value="visits" className="mt-6">
+            <div className="space-y-4">
+              {filterRecordsByType('visits').map(renderRecordCard)}
+            </div>
+          </TabsContent>
 
-        <TabsContent value="vaccinations" className="mt-6">
-          <div className="space-y-4">
-            {history.filter(e => e.type === 'vaccination').map((entry) => (
-              <Card key={entry.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {getTypeIcon(entry.type)}
-                    {entry.title}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(entry.date).toLocaleDateString()} • {entry.veterinarian}
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Description:</p>
-                      <p>{entry.description}</p>
-                    </div>
-                    {entry.details && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Details:</p>
-                        <p className="text-sm">{entry.details}</p>
-                      </div>
-                    )}
-                    {entry.notes && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Notes:</p>
-                        <p className="text-sm">{entry.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+          <TabsContent value="vaccinations" className="mt-6">
+            <div className="space-y-4">
+              {filterRecordsByType('vaccinations').map(renderRecordCard)}
+            </div>
+          </TabsContent>
 
-        <TabsContent value="surgeries" className="mt-6">
-          <div className="space-y-4">
-            {history.filter(e => e.type === 'surgery').map((entry) => (
-              <Card key={entry.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {getTypeIcon(entry.type)}
-                    {entry.title}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(entry.date).toLocaleDateString()} • {entry.veterinarian}
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Description:</p>
-                      <p>{entry.description}</p>
-                    </div>
-                    {entry.details && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Details:</p>
-                        <p className="text-sm">{entry.details}</p>
-                      </div>
-                    )}
-                    {entry.notes && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Notes:</p>
-                        <p className="text-sm">{entry.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="surgeries" className="mt-6">
+            <div className="space-y-4">
+              {filterRecordsByType('surgeries').map(renderRecordCard)}
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
 
-      {history.length === 0 && (
+      {!loadingRecords && medicalRecords.length === 0 && selectedPatient && (
         <div className="text-center py-12">
           <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">No history records found</p>
+          <p className="text-muted-foreground">No medical records found for this patient</p>
         </div>
       )}
     </div>

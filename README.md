@@ -1,25 +1,47 @@
 # VetClinic Management System
 
-A modern veterinary clinic management system built with Next.js (App Router), React, TypeScript, Tailwind CSS — kini memakai backend service layer sederhana dengan data mock (tanpa database aktif). Setup Prisma dan migrasi database sengaja DITUNDA untuk dikerjakan oleh anggota tim lain.
+A modern veterinary clinic management system built with Next.js (App Router), React, TypeScript, Tailwind CSS, and Supabase (PostgreSQL). The system features a complete backend service layer with active database integration, role-based access control, and comprehensive security measures.
+
+> 📚 **For detailed technical documentation**, see [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)
 
 ## Features
 
 ### For Pet Owners
+
 - 🔍 **QR Code Scanner** - Scan or upload your pet's QR code to instantly view medical records (no login required)
 - 📱 **Mobile-Friendly** - Responsive design works on all devices
 - 🏥 **Service Information** - View available veterinary services
 
 ### For Staff (Admin & Doctors)
+
 - 👨‍⚕️ **Role-Based Dashboards** - Separate dashboards for Admin and Doctor roles
 - 📊 **Statistics & Analytics** - View patient stats and activity (appointments removed per DFD scope)
 - 🔐 **Secure Authentication** - Login system with role-based access control
 
 ## Tech Stack
 
-- Framework: Next.js 14 (App Router)
-- UI: React 18 + Tailwind CSS
-- Language: TypeScript
-- Linting: ESLint (Next.js config)
+### Backend
+
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Database**: Supabase (PostgreSQL) - **ACTIVE**
+- **Authentication**: bcrypt + Session-based with HttpOnly cookies
+- **Database Client**: Supabase JS Client SDK (@supabase/supabase-js)
+- **Security**: Rate limiting, input validation, XSS/SQL injection protection
+
+### Security Features
+
+- **Rate Limiting**: In-memory rate limiter (production-ready with Redis recommendation)
+  - Login: 5 attempts per 15 minutes
+  - Register: 3 attempts per hour
+  - API Read: 100 requests per minute
+  - API Write: 30 requests per minute
+- **Input Validation**: Comprehensive validators for email, name, UUID, enum, text fields
+- **Input Sanitization**: XSS protection, SQL injection prevention
+- **Password Security**: bcrypt hashing with salt rounds
+- **RBAC**: Role-based access control (admin, doctor, pet-owner)
+- **Audit Logging**: Complete activity tracking with Supabase storage
+- **CORS**: Configured for production deployment
 
 ## Getting Started (Teammate Quick Start)
 
@@ -32,6 +54,7 @@ Before you start, make sure you have installed:
 - **Git** (optional, for cloning) ([Download here](https://git-scm.com/))
 
 To check if installed:
+
 ```bash
 node --version  # Should show v18.17 or higher
 npm --version   # Should show 9.x or higher
@@ -43,12 +66,14 @@ git --version   # Should show installed version
 #### Option 1: Clone from Git Repository (Recommended)
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd "Tugas Besar"
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 
@@ -56,6 +81,7 @@ npm install
 ```
 
 3. Run the development server:
+
 ```bash
 npm run dev
 ```
@@ -69,11 +95,13 @@ npm run dev
 2. Open terminal/command prompt in the extracted folder
 
 3. Install dependencies:
+
 ```bash
 npm install
 ```
 
 4. Run the development server:
+
 ```bash
 npm run dev
 ```
@@ -85,6 +113,7 @@ npm run dev
 ⚠️ **Do NOT copy `node_modules` or `.next` folders!** These will be regenerated when you run `npm install`.
 
 ✅ Only commit/share:
+
 - `src/` (source)
 - `public/` (assets)
 - `prisma/` (schema & migrations)
@@ -101,58 +130,59 @@ npm start
 
 ## Project Structure
 
-```
-├── prisma/ (draft / boleh dihapus jika tidak pakai Prisma)
-│   ├── schema.prisma (jika dipertahankan)
-│   └── migrations/ (kosong)
-├── src/
-│   ├── app/                        # Next.js App Router pages
-│   │   ├── admin/
-│   │   ├── doctor/
-│   │   ├── api/                    # API Routes (thin) → call services
-│   │   │   ├── auth/
-│   │   │   ├── doctors/route.ts
-│   │   │   ├── patients/route.ts
-│   │   │   └── corrections/route.ts
-│   │   └── page.tsx
-│   ├── server/                     # Backend logic (source of truth)
-│   │   ├── models/                 # Data models (TS interfaces)
-│   │   ├── services/               # Business logic (saat ini memakai mock arrays)
-│   │   ├── middleware/             # Future: auth/validation
-│   │   └── database/               # Placeholder (belum ada ORM)
-│   ├── components/                 # UI components
-│   │   ├── Corrections.tsx         # Updated to use API
-│   │   ├── AuditLogs.tsx           # Uses local storage store
-│   │   └── ui/
-│   ├── context/                    # AuthContext (RBAC)
-│   └── lib/                        # Utilities
-│       └── auditLog.ts
-├── .env                            # DATABASE_URL & other secrets (do not commit)
-├── prisma.config.ts
-└── package.json
-```
+> 📌 **Note**: For complete folder structure and architecture diagrams, see [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)
 
-## Status Integrasi Database
+## Database Configuration
 
-Saat ini: menggunakan data mock di `src/server/models/*`. Tidak ada koneksi database.
+Project ini menggunakan **Supabase** sebagai backend database (PostgreSQL).
 
-Jika tim ingin melanjutkan dengan database:
-1. Pilih teknologi (Prisma / Drizzle / Sequelize / raw SQL)
-2. Buat skema sesuai kebutuhan (boleh mulai dari draft `prisma/schema.prisma` jika dipertahankan)
-3. Implementasi akses data: ubah isi service (misal `doctorService.ts`) dari operasi array ke query database
-4. Tambah layer `database/` untuk inisialisasi client
-5. Tambahkan seeding awal (opsional) untuk user admin & contoh dokter/pasien
+### Database Tables
 
-Catatan: API routes sudah tipis dan siap menerima perubahan internal service tanpa perubahan endpoint.
+The system uses the following database tables:
+
+- **users** - User accounts (admin, doctor, pet-owner)
+- **doctors** - Doctor profiles with specialization
+- **patients** - Pet patient records with QR codes
+- **medical_records** - Complete medical visit history
+- **corrections** - Medical record correction workflow
+- **audit_logs** - System activity tracking
+- **sessions** - User session management
+
+### Database Views
+
+For optimized queries, the following views are available:
+
+- **doctors_with_users** - Doctors joined with user information
+- **patients_with_owners** - Patients with owner contact details
+- **medical_records_detailed** - Complete medical records with patient & doctor names
+
+> 📊 **For complete database schema**, see [PROJECT_STRUCTURE.md - Database Schema](./PROJECT_STRUCTURE.md#-database-schema-supabase)
+
+### Setup Instructions
+
+1. Create a project at [Supabase](https://supabase.com)
+2. Run the SQL migrations to create tables and views
+3. Configure Row Level Security (RLS) policies
+4. Update environment variables:
+
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your-project-url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   ```
+
+---
 
 ## Features & Routes
 
 ### Public Routes (No Login Required)
+
 - `/` - Landing page with QR code scanner
 - `/login` - Staff login page
 - `/register` - Staff registration page
 
 ### Protected Routes (Login Required)
+
 - `/admin/dashboard` - Admin dashboard
 - `/doctor/dashboard` - Doctor dashboard
 - `/admin/corrections` - Admin correction review
@@ -163,36 +193,78 @@ Catatan: API routes sudah tipis dan siap menerima perubahan internal service tan
 ### Test Credentials
 
 **Admin:**
+
 - Email: `admin@vetclinic.com`
 - Password: `admin123`
 
 **Doctor:**
+
 - Email: `doctor@vetclinic.com`
 - Password: `doctor123`
 
-Note: Current auth is for development only (mock users, cookie-based session). For production, implement proper hashing (bcrypt/argon2), JWT or NextAuth, and server-side guards.
+**Important**: Default test accounts harus dibuat manual di Supabase atau melalui seeding script.
 
-## API Endpoints (current)
+Untuk development, buat user dengan role:
 
-- Auth
-	- POST `/api/auth/login`
-	- POST `/api/auth/logout`
-- Doctors
-	- GET/POST/PATCH/DELETE `/api/doctors`
-- Patients
-	- GET/POST/PATCH/DELETE `/api/patients`
-- Corrections
-	- GET/POST/PATCH `/api/corrections`
+- `admin` - Full system access
+- `doctor` - Medical records & patient management
+- `pet-owner` - View own pet records only
 
-Example fetch in a component:
+**Production**: Gunakan strong password dan enable 2FA untuk admin accounts.
+
+## API Endpoints
+
+### Authentication
+
+- `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
+
+### Resource Management
+
+- `GET/POST/PATCH/DELETE /api/doctors` - Doctor CRUD operations
+- `GET/POST/PATCH/DELETE /api/patients` - Patient CRUD operations
+- `GET/POST/PATCH/DELETE /api/medical-records` - Medical records management
+- `GET/POST/PATCH /api/corrections` - Correction requests workflow
+
+### Admin & Utilities
+
+- `GET/DELETE /api/audit-logs` - Audit logs management
+- `GET /api/doctor-stats` - Doctor statistics
+- `POST /api/register-pet` - Public pet registration
+
+### Public Access (No Authentication)
+
+- `GET /api/public/patients/[id]` - Get patient info by QR code
+
+### Development/Testing
+
+- `POST /api/password_verification` - Password verification utility
+- `GET /api/test-db` - Database connection test
+- `GET /api/test-password` - Password hashing test
+
+> 📖 **For detailed API flow diagrams**, see [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)
+
+**Example Usage:**
+
 ```ts
-const res = await fetch('/api/doctors');
+// Fetch all doctors
+const res = await fetch("/api/doctors");
 const { doctors } = await res.json();
+
+// Create new patient
+const newPatient = await fetch("/api/patients", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(patientData),
+});
 ```
+
+---
 
 ## QR Code Scanner
 
 The landing page includes a QR code scanner feature that allows pet owners to:
+
 1. Upload or scan their pet's QR code
 2. View pet information instantly (name, owner, visit history)
 3. No account creation or login required
@@ -201,49 +273,134 @@ The landing page includes a QR code scanner feature that allows pet owners to:
 
 ### Available Scripts
 
-- `npm run dev`   - Start development server
+- `npm run dev` - Start development server
 - `npm run build` - Build for production
-- `npm start`     - Start production server
-- `npm run lint`  - Run ESLint
+- `npm start` - Start production server
+- `npm run lint` - Run ESLint
+
+### Testing Scripts
+
+- `npm test` - Run tests in watch mode
+- `npm run test:coverage` - Generate test coverage report
+- `npm run test:security` - Run security tests only
+- `npm run test:validation` - Run validation tests only
+- `npm run test:ci` - Run tests in CI environment
 
 ### Code Style
 
 This project uses:
+
 - ESLint for code linting
 - TypeScript for type safety
 - Tailwind CSS for styling
 
-## Status & Next Steps (for teammates)
+## Security Best Practices
 
-Current status:
-- Backend service layer created (`src/server/services/*`) and API routes wired.
-- Corrections component now uses API; other components still use mock data.
-- Database belum aktif (mock). Tim bebas memilih ORM / solusi persistence.
+This project implements security best practices:
 
-Next steps to continue:
-1. Decide database option and run migrations (see Backend Setup above).
-2. Update components to use API instead of local mock data:
-	- `DoctorManagement.tsx` (GET/POST/PATCH/DELETE /api/doctors)
-	- `Patients.tsx`, `AddPatient.tsx` (use /api/patients)
-	- `MedicalRecords.tsx`, `PatientHistory.tsx` (to be backed by API)
-3. (Opsional) Migrasikan service layer ke database pilihan tim.
-4. Harden authentication (password hashing, server-side guards, possibly NextAuth).
-5. Optional: Move audit logs from localStorage to DB (`AuditLog` model exists).
+1. **Environment Variables**
+
+   - NEVER commit `.env` files to Git
+   - Use different keys for development and production
+   - Rotate keys periodically
+
+2. **Rate Limiting**
+
+   - Implemented for all API endpoints
+   - Production: Consider upgrading to Redis-based rate limiting for distributed systems
+
+3. **Input Validation**
+
+   - All user inputs are validated and sanitized
+   - SQL injection protection via Supabase parameterized queries
+   - XSS protection via input sanitization
+
+4. **Authentication**
+
+   - Password hashing with bcrypt (10 salt rounds)
+   - Session management with HttpOnly cookies
+   - JWT token validation on every API request
+
+5. **Audit Logging**
+
+   - All actions logged to `audit_logs` table
+   - Includes: timestamp, user, action, resource, status, IP address
+
+6. **HTTPS Only**
+   - Production deployment MUST use HTTPS
+   - Configure in Vercel/deployment platform
+
+## Project Status
+
+### ✅ Completed Features
+
+- Backend service layer with Supabase integration
+- Complete API routes for all resources
+- Authentication & session management (bcrypt + HttpOnly cookies)
+- Role-based access control (RBAC)
+- Rate limiting & input validation
+- Audit logging system
+- QR code generation & scanning
+- Medical record correction workflow
+- Security testing suite
+
+### 🚧 In Progress
+
+- Frontend component integration with API endpoints
+- Blockchain integration for medical record integrity (planned)
+
+### 📋 Next Steps
+
+1. **Frontend Integration**: Connect remaining UI components to API endpoints
+
+   - `DoctorManagement.tsx` → `/api/doctors`
+   - `Patients.tsx`, `AddPatient.tsx` → `/api/patients`
+   - `MedicalRecords.tsx`, `PatientHistory.tsx` → `/api/medical-records`
+
+2. **Real-time Features**: Implement Supabase Realtime for live updates
+
+   - Notification system for correction approvals
+   - Live dashboard updates
+
+3. **Advanced Features**:
+
+   - Blockchain hashing for medical record tamper-proofing
+   - PDF report generation for medical records
+   - Email notifications
+
+4. **Production Deployment**:
+   - Deploy to Vercel
+   - Configure production environment variables
+   - Setup Redis for distributed rate limiting
+   - Enable monitoring & logging
+
+> 📖 **For detailed architecture and technical documentation**, see [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)
 
 ## Contributing (Team Workflow)
 
 Branching:
+
 - `main` → stable
-- `dev`  → integration
+- `dev` → integration
 - Feature: `feat/<feature-name>`
 - Fix: `fix/<short-desc>`
 
 Workflow:
+
 1. Create branch from `dev`: `git checkout -b feat/<name>`
 2. Commit small, meaningful changes
 3. Run lint and (if applicable) `npx prisma migrate dev` when schema changes
 4. Open PR to `dev` and request review
 5. After approval, squash & merge
+
+### Security Checklist Before PR
+
+- [ ] No sensitive data (API keys, passwords) in code
+- [ ] Input validation for all user inputs
+- [ ] Error messages don't leak sensitive info
+- [ ] Rate limiting applied to new endpoints
+- [ ] Audit logging added for important actions
+- [ ] Tests written for security-critical code
 
 ## License
 
@@ -256,4 +413,33 @@ For questions or support, open an issue or contact the maintainers.
 ---
 
 Built with ❤️ using Next.js and Tailwind CSS
+
+---
+
+## 📚 Documentation
+
+- **[PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)** - Complete technical documentation
+
+  - Detailed folder structure
+  - Database schema with all fields
+  - Request flow diagrams
+  - Security implementation details
+  - Architecture patterns
+
+- **[src/server/README.md](./src/server/README.md)** - Backend service layer documentation
+
+---
+
+**Project**: VetClinic Management System  
+**Version**: 0.1.0  
+**Framework**: Next.js 14 + TypeScript + Supabase  
+**Last Updated**: December 4, 2025  
+**Repository**: [vet-clinic-devsecops](https://github.com/Dzyra46/vet-clinic-devsecops)
+
+---
+
 # vet-clinic
+
+```
+
+```

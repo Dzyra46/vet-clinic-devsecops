@@ -87,26 +87,58 @@ export function Corrections({ role, doctorName }: CorrectionsProps) {
   const submitCorrection = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
-      doctorName: doctorName || 'Dr. Unknown',
-      ...formData,
+      recordId: formData.recordId,
+      patientId: formData.patientId,
+      patientName: formData.patientName,
+      field: formData.field,
+      currentValue: formData.currentValue,
+      proposedValue: formData.proposedValue,
+      reason: formData.reason,
     };
-    await fetch('/api/corrections', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    fetchCorrections();
-    setShowForm(false);
-    setFormData({ recordId:'', patientId:'', patientName:'', field:'', currentValue:'', proposedValue:'', reason:'' });
+    try {
+      const res = await fetch('/api/corrections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'include'
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to submit correction');
+      }
+      
+      await fetchCorrections();
+      setShowForm(false);
+      setFormData({ recordId:'', patientId:'', patientName:'', field:'', currentValue:'', proposedValue:'', reason:'' });
+    } catch (error) {
+      console.error('Submit error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to submit correction');
+    }
   };
 
   const decide = async (id: string, status: 'approved' | 'rejected') => {
-    await fetch('/api/corrections', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, action: status, decidedBy: 'Admin Jane' })
-    });
-    fetchCorrections();
+    try {
+      const res = await fetch('/api/corrections', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id, 
+          status,
+        }),
+        credentials: 'include'
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to update correction');
+      }
+      
+      await fetchCorrections();
+    } catch (error) {
+      console.error('Decide error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to update correction');
+    }
   };
 
   return (
@@ -138,6 +170,7 @@ export function Corrections({ role, doctorName }: CorrectionsProps) {
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value as any)}
           className="border rounded-md px-3 py-2 bg-white"
+          aria-label="Filter by status"
         >
           <option value="all">All Status</option>
           <option value="pending">Pending</option>

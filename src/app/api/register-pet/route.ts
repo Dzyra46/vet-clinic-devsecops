@@ -1,0 +1,179 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/server';
+import { hashPassword } from '@/lib/auth/password';
+import { validateEmail, validateName, validateTextField } from '@/lib/validation/validators';
+import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/ratelimit/ratelimiter';
+
+export async function POST(request: NextRequest) {
+  try {
+    // 1. Check rate limit
+    const { allowed, remaining, resetTime } = checkRateLimit(
+      request,
+      RATE_LIMITS.API_WRITE.limit,
+      RATE_LIMITS.API_WRITE.windowMs
+    );
+
+    if (!allowed) {
+      const response = rateLimitResponse(resetTime, remaining);
+      return NextResponse.json(response.body, {
+        status: response.statusCode,
+        headers: response.headers,
+      });
+    }
+
+    // 2. Parse request body
+    const body = await request.json();
+    const {
+      ownerName,
+      ownerEmail,
+      ownerPhone,
+      ownerAddress,
+      password,
+      petName,
+      species,
+      breed,
+      birthDate,
+      age,
+    } = body;
+
+    // 3. Validate required fields
+    if (!ownerName || !ownerEmail || !ownerPhone || !ownerAddress || !password || !petName || !species || !breed) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // 4. Validate formats
+    const emailValidation = validateEmail(ownerEmail);
+    if (!emailValidation.isValid) {
+      return NextResponse.json({ error: emailValidation.error }, { status: 400 });
+    }
+
+    const nameValidation = validateName(ownerName, 'Owner name');
+    if (!nameValidation.isValid) {
+      return NextResponse.json({ error: nameValidation.error }, { status: 400 });
+    }
+
+    const petNameValidation = validateName(petName, 'Pet name');
+    if (!petNameValidation.isValid) {
+      return NextResponse.json({ error: petNameValidation.error }, { status: 400 });
+    }
+
+    // 5. Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return NextResponse.json(
+        { error: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createAdminClient();
+
+    // 6. Check if email already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', ownerEmail)
+      .single();
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'Email already registered' },
+        { status: 409 }
+      );
+    }
+
+    // 7. Hash password
+    const passwordHash = await hashPassword(password);
+
+    // 8. Create pet owner user account
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .insert({
+        name: ownerName,
+        email: ownerEmail,
+        password_hash: passwordHash,
+        role: 'pet-owner',
+      })
+      .select()
+      .single();
+
+    if (userError || !userData) {
+      console.error('Error creating user:', userError);
+      return NextResponse.json(
+        { error: 'Failed to create account' },
+        { status: 500 }
+      );
+    }
+
+    // 9. Calculate birth date or age
+    let finalBirthDate = birthDate;
+    let finalAge = age ? parseFloat(age) : 0;
+
+    if (!finalBirthDate && finalAge) {
+      const currentYear = new Date().getFullYear();
+      const birthYear = currentYear - Math.floor(finalAge);
+      finalBirthDate = `${birthYear}-01-01`;
+    }
+
+    // 10. Create patient record with PENDING QR code
+    const { data: patientData, error: patientError } = await supabase
+      .from('patients')
+      .insert({
+        name: petName,
+        species,
+        breed,
+        birth_date: finalBirthDate || null,
+        age: finalAge,
+        weight: null, // Will be set by doctor during first visit
+        owner_id: userData.id,
+        owner: ownerName,
+        contact: ownerPhone,
+        qr_code: 'PENDING', // Admin will generate this later
+        status: 'healthy',
+        notes: ownerAddress, // Store address in notes
+      })
+      .select()
+      .single();
+
+    if (patientError || !patientData) {
+      console.error('Error creating patient:', patientError);
+      // Rollback: delete user
+      await supabase.from('users').delete().eq('id', userData.id);
+      return NextResponse.json(
+        { error: 'Failed to register pet' },
+        { status: 500 }
+      );
+    }
+
+    // 11. Log audit
+    await supabase.from('audit_logs').insert({
+      user_id: userData.id,
+      user_name: ownerName,
+      user_role: 'pet-owner',
+      action: 'register',
+      resource: 'pet-owner',
+      details: `Pet owner self-registered: ${ownerEmail}, Pet: ${petName}`,
+      status: 'success',
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Registration successful. QR code will be sent to your email once generated by admin.',
+        userId: userData.id,
+        patientId: patientData.id,
+      },
+      { status: 201 }
+    );
+
+  } catch (error) {
+    console.error('POST /api/register-pet-owner error:', error);
+    return NextResponse.json(
+      { error: 'Registration failed' },
+      { status: 500 }
+    );
+  }
+}

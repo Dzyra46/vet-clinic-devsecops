@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { useRouter } from 'next/navigation';
 import { Html5Qrcode, Html5QrcodeCameraScanConfig } from 'html5-qrcode';
+import { X } from 'lucide-react';
 
 interface DecodedPetData {
   patientId: string;
@@ -32,6 +33,7 @@ export default function QrScanner() {
   const [error, setError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [hasCamera, setHasCamera] = useState<boolean>(true);
+  const [decodedQrText, setDecodedQrText] = useState<string>('');
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const elementId = 'qr-reader-container';
 
@@ -44,6 +46,25 @@ export default function QrScanner() {
       scannerRef.current?.clear();
     };
   }, []);
+
+  // Handle successful scan - display decoded data for review
+  const handleScan = (decodedText: string) => {
+    const parsed = parseQrPayload(decodedText);
+    if (parsed) {
+      setPetData(parsed);
+      setDecodedQrText(decodedText); // Store the full QR text
+      stopScanner();
+      setError(null);
+    } else {
+      setError('QR format not recognized');
+    }
+  };
+
+  const proceedToVerification = () => {
+    if (petData && decodedQrText) {
+      router.push(`/pet/verify?id=${encodeURIComponent(petData.patientId)}&qr=${encodeURIComponent(decodedQrText)}`);
+    }
+  };
 
   const startScanner = async () => {
     setError(null);
@@ -69,15 +90,7 @@ export default function QrScanner() {
       await scannerRef.current.start(
         cameraId,
         config,
-        decodedText => {
-          const parsed = parseQrPayload(decodedText);
-          if (parsed) {
-            setPetData(parsed);
-            stopScanner();
-          } else {
-            setError('QR format not recognized');
-          }
-        },
+        handleScan,
         () => {}
       );
     } catch (e: any) {
@@ -101,41 +114,50 @@ export default function QrScanner() {
     if (!file) return;
     setError(null);
     setPetData(null);
+    
     try {
-      const tempId = 'qr-temp-image';
-      const reader = new Html5Qrcode(tempId);
-      // Create a hidden img element for scanning
-      const url = URL.createObjectURL(file);
-      const img = document.createElement('img');
-      img.src = url;
-      img.id = tempId;
-      img.style.display = 'none';
-      document.body.appendChild(img);
-      const result = await reader.scanFile(file, true);
-      const parsed = parseQrPayload(result);
-      if (parsed) {
-        setPetData(parsed);
-      } else {
-        setError('QR format not recognized');
-      }
-      reader.clear();
-      document.body.removeChild(img);
+      // Create a temporary hidden div for Html5Qrcode
+      const tempDiv = document.createElement('div');
+      tempDiv.id = 'qr-image-reader';
+      tempDiv.style.display = 'none';
+      document.body.appendChild(tempDiv);
+      
+      // Initialize Html5Qrcode with the temporary div
+      const html5QrCode = new Html5Qrcode('qr-image-reader');
+      
+      // Scan the uploaded file
+      const decodedText = await html5QrCode.scanFile(file, true);
+      
+      // Clean up
+      html5QrCode.clear();
+      document.body.removeChild(tempDiv);
+      
+      // Process the decoded QR code
+      handleScan(decodedText);
+      
     } catch (err: any) {
-      setError(err?.message || 'Failed to read image');
+      // Clean up on error
+      const tempDiv = document.getElementById('qr-image-reader');
+      if (tempDiv) {
+        document.body.removeChild(tempDiv);
+      }
+      
+      setError(err?.message || 'Failed to read QR code from image. Please ensure the image contains a valid QR code.');
+      console.error('QR upload error:', err);
     }
   };
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-gray-50">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 bg-gray-50 shadow-lg rounded-lg">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900">Quick Pet Records Access</h2>
-        <p className="mt-4 text-lg text-gray-600">Scan your pet's QR code (camera or image upload) to view basic data instantly.</p>
+        <p className="mt-4 text-lg text-gray-600">Scan your pet's QR code (camera or image upload) <br /> to view basic data instantly.</p>
       </div>
       <div className="max-w-3xl mx-auto">
         <Card className="p-6">
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <h3 className="font-semibold mb-2">Live Camera Scan</h3>
+              <h3 className="font-semibold mb-4">Live Camera Scan</h3>
               <div className="border rounded-lg bg-white p-4 flex flex-col items-center">
                 <div id={elementId} className={`w-full flex items-center justify-center ${!isScanning ? 'h-64 bg-gray-100 rounded-md' : ''}`}></div>
                 <div className="mt-4 flex gap-3">
@@ -148,7 +170,7 @@ export default function QrScanner() {
               </div>
               <div className="mt-6">
                 <h3 className="font-semibold mb-2">Upload QR Image</h3>
-                <input id="qr-file" type="file" accept="image/*" onChange={handleImageUpload} className="block w-full text-sm" />
+                <input id="qr-file" type="file" accept="image/*" onChange={handleImageUpload} className="block w-full text-sm" title="Upload QR code image file" />
                 <p className="text-xs text-gray-500 mt-1">PNG/JPG image containing the QR code.</p>
               </div>
               {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
@@ -180,14 +202,33 @@ export default function QrScanner() {
                       <p className="font-medium">{petData.lastVisit}</p>
                     </div>
                   )}
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-800 font-medium">
+                      Is this your pet? Click below to view medical records.
+                    </p>
+                  </div>
                   {/* Appointment info removed per DFD scope */}
-                  <Button
-                    type="button"
-                    className="w-full mt-2"
-                    onClick={() => router.push(`/pet?id=${encodeURIComponent(petData.patientId)}`)}
-                  >
-                    View Full Record
-                  </Button>
+                  <div className="mt-6 space-y-2">
+                    <Button
+                      type="button"
+                      onClick={proceedToVerification}
+                      className="w-full"
+                    >
+                      View Medical Records
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        setPetData(null);
+                        setDecodedQrText('');
+                        setError(null);
+                      }}
+                      className="w-full"
+                    >
+                      Close
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
