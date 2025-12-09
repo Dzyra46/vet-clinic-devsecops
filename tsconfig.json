@@ -14,13 +14,13 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "ignoreDeprecations": "6.0", // ✅ TAMBAHKAN INI (suppress warning sementara)
+    // "ignoreDeprecations": "5.0", // ✅ TAMBAHKAN INI (suppress warning sementara)
     "plugins": [
       {
         "name": "next"
       }
     ],
-    "baseUrl": ".",
+    // "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
