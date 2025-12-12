@@ -24,7 +24,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted with:', formData);
+    // console.log('Form submitted with:', formData);
     
     // Basic validation
     let hasErrors = false;

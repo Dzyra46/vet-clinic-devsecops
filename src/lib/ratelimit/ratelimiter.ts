@@ -70,6 +70,14 @@ export function checkRateLimit(
   limit: number = 30,
   windowMs: number = 60000 // 1 minute default
 ): { allowed: boolean; remaining: number; resetTime: number } {
+
+  // Jika Redis tersedia (production), gunakan Redis limiter
+  if (process.env.REDIS_URL) {
+    // Import dan gunakan Redis rate limiter
+    const { checkRateLimitRedis } = require('./redis');
+    return checkRateLimitRedis(request, limit, windowMs);
+  }
+  
   const clientIP = getClientIP(request);
   const key = clientIP;
   const now = Date.now();
@@ -153,12 +161,12 @@ export function rateLimitResponse(resetTime: number, remaining: number) {
  */
 export const RATE_LIMITS = {
   // Authentication endpoints - ketat
-  AUTH_LOGIN: { limit: 10, windowMs: 15 * 60 * 1000 }, // 5 requests per 15 minutes
+  AUTH_LOGIN: { limit: 10, windowMs: 15 * 60 * 1000 }, // 10 requests per 15 minutes
   AUTH_REGISTER: { limit: 3, windowMs: 60 * 60 * 1000 }, // 3 requests per hour
   AUTH_LOGOUT: { limit: 10, windowMs: 60 * 1000 }, // 10 requests per minute
   
   // API endpoints - moderate
-  API_READ: { limit: 100, windowMs: 60 * 1000 }, // 100 requests per minute
+  API_READ: { limit: 30, windowMs: 60 * 1000 }, // 30 requests per minute
   API_WRITE: { limit: 30, windowMs: 60 * 1000 }, // 30 requests per minute
   
   // General - permissive

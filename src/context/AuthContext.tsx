@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
 
     try {
-      console.log('Attempting login with:', { email, password });
+      // console.log('Attempting login with:', { email, password });
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       const data = await response.json();
-      console.log('Login response:', data);
+      // console.log('Login response:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');

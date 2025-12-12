@@ -5,6 +5,8 @@ import { validateEmail } from '@/lib/validation/validators';
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/ratelimit/ratelimiter';
 
 export async function POST(request: NextRequest) {
+  let body: { email?: string; password?: string } = {};
+
   try {
     // 1. Check rate limit (5 attempts per 15 minutes)
     const { allowed, remaining, resetTime } = checkRateLimit(
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Parse request body
-    const body = await request.json();
+    body = await request.json();
     const { email, password } = body;
 
     // 3. Validate required fields
@@ -58,12 +60,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Login attempt:', { email });
+    // console.log('Login attempt:', { email });
 
     // 5. Attempt login via service
     const { user, session } = await AuthService.login(email, password);
 
-    console.log('Login successful:', user.email);
+    // console.log('Login successful:', user.email);
 
     // 6. Log successful login to audit trail
     const supabase = createAdminClient();
@@ -85,16 +87,16 @@ export async function POST(request: NextRequest) {
 
     // Log failed login attempt
     try {
-      const body = await request.json();
       const supabase = createAdminClient();
+      const { email: attemptEmail } = body;
       
       await supabase.from('audit_logs').insert({
         user_id: null,
-        user_name: body.email || 'unknown',
+        user_name: attemptEmail || 'unknown',
         user_role: 'unknown',
         action: 'login',
         resource: 'auth',
-        details: `Failed login attempt: ${body.email}`,
+        details: `Failed login attempt: ${attemptEmail || 'no email provided'}`,
         status: 'failed',
       });
     } catch (auditError) {

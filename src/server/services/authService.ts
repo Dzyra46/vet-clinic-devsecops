@@ -234,7 +234,7 @@ export class AuthService {
       value: session.token,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       path: '/',
       expires: new Date(session.expires_at),
     });
@@ -253,7 +253,7 @@ export class AuthService {
       value: '',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       path: '/',
       maxAge: 0, // Expire immediately
     });
