@@ -53,9 +53,13 @@ function getClientIP(request: NextRequest): string {
     return forwarded.split(',')[0].trim();
   }
   
-  return request.headers.get('x-real-ip') || 
-         request.ip || 
-         'unknown';
+  const realIP = request.headers.get('x-real-ip');
+  if (realIP) {
+    return realIP;
+  }
+  
+  // Fallback ke default jika semua undefined
+  return request.ip || '127.0.0.1';
 }
 
 /**
@@ -145,12 +149,12 @@ export function rateLimitResponse(resetTime: number, remaining: number) {
     statusCode: 429, // Too Many Requests
     headers: {
       'Retry-After': Math.max(0, retryAfter).toString(),
-      'X-RateLimit-Remaining': remaining.toString(),
+      'X-RateLimit-Remaining': (remaining || 0).toString(),
       'X-RateLimit-Reset': new Date(resetTime).toISOString(),
     },
     body: {
       error: 'Too many requests. Please try again later.',
-      retryAfter,
+      retryAfter: Math.max(0, retryAfter),
       resetTime: new Date(resetTime).toISOString(),
     },
   };

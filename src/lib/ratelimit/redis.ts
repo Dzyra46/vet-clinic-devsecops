@@ -26,7 +26,10 @@ export async function checkRateLimitRedis(
     return checkRateLimit(request, limit, windowMs);
   }
   
-  const clientIP = request.headers.get('x-forwarded-for') || request.ip || 'unknown';
+  const forwarded = request.headers.get('x-forwarded-for');
+  const clientIP = forwarded 
+    ? forwarded.split(',')[0].trim() 
+    : (request.headers.get('x-real-ip') || request.ip || '127.0.0.1');
   const key = `ratelimit:${clientIP}`;
   const now = Date.now();
   const resetTime = now + windowMs;
